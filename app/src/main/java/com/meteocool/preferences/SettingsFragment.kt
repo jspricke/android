@@ -111,16 +111,7 @@ class SettingsFragment() : PreferenceFragmentCompat() {
                 }
 
                 val token = task.result
-                var version: String = ""
-                try {
-                    val pInfo = requireContext().packageManager.getPackageInfo(
-                        requireContext().packageName,
-                        0
-                    )
-                    version = pInfo.versionName
-                } catch (e: PackageManager.NameNotFoundException) {
-                    e.printStackTrace()
-                }
+                val version: String = SharedPrefUtils.getAppVersion(defaultSharedPreferences)
                 handleExternalLink(
                     getString(R.string.feedback_url) + "\n" + token + "\nShared-Token: $tokenInShared" + "\n" + version
 
@@ -172,6 +163,20 @@ class SettingsFragment() : PreferenceFragmentCompat() {
             }
             true
         }
+    }
+
+    private fun getAppVersion(): String {
+        var version: String = ""
+        try {
+            val pInfo = requireContext().packageManager.getPackageInfo(
+                requireContext().packageName,
+                0
+            )
+            version = pInfo.versionName
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+        }
+        return version
     }
 
     private fun handleExternalLink(uri: String) {
