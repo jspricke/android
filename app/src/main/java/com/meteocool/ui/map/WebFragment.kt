@@ -115,14 +115,7 @@ class WebFragment : Fragment() {
                 Pair("mapRotation", defaultSharedPreferences.getBoolean("map_rotate", false)),
             )
             Timber.d("Updated ")
-            val string = "window.settings.injectSettings(${settings.toJson(currentSettings)});"
-            viewDataBinding.webView.post {
-                run {
-                    viewDataBinding.webView.evaluateJavascript(string) {
-                        Timber.d(string)
-                    }
-                }
-            }
+            windowSettingsInjectSettings(settings, currentSettings)
         }
 
         viewDataBinding.webView.addJavascriptInterface(WebAppInterface(), "Android")
@@ -158,17 +151,31 @@ class WebFragment : Fragment() {
 
     }
 
+    private fun windowSettingsInjectSettings(
+        settings: Gson,
+        currentSettings: Map<String, Boolean>
+    ) {
+        val string = "window.settings.injectSettings(${settings.toJson(currentSettings)});"
+        viewDataBinding.webView.post {
+            run {
+                viewDataBinding.webView.evaluateJavascript(string) {
+                    Timber.d(string)
+                }
+            }
+        }
+    }
+
     override fun onStart() {
         super.onStart()
 
-        registerTileUpdates()
+        windowEnterForeground()
 
         if (PermUtils.isLocationPermissionGranted(requireContext())) {
             webViewModel.requestForegroundLocationUpdates()
         }
     }
 
-    private fun registerTileUpdates() {
+    private fun windowEnterForeground() {
         if (isRequestSettingsCalled) {
             val function = "window.enterForeground();"
             try {
@@ -197,10 +204,12 @@ class WebFragment : Fragment() {
         super.onResume()
         Timber.d("onResume")
 
-        webViewModel.requestingSettings.observe(
-            viewLifecycleOwner,
-            requestSettingsObserver
-        )
+        if(isRequestSettingsCalled) {
+            webViewModel.requestingSettings.observe(
+                viewLifecycleOwner,
+                requestSettingsObserver
+            )
+        }
 
         webViewModel.locationData.observe(viewLifecycleOwner, locationObserver)
 
@@ -298,7 +307,7 @@ class WebFragment : Fragment() {
         fun requestSettings() {
             Timber.d("requestSettings injected")
             isRequestSettingsCalled = true
-            registerTileUpdates()
+            webViewModel.sendSettings()
             if (defaultSharedPreferences.getBoolean("map_zoom", false)) {
                 zoomOnLastKnownLocation()
             }
